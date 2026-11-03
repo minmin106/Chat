@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Chat</title>
+  <style>
+    :root {
+      --bg-color: #000000;
+      --header-bg: rgba(20, 20, 23, 0.75);
+      --glass-dock-bg: rgba(20, 20, 24, 0.72);
+      --bubble-incoming: rgba(38, 38, 42, 0.75);
+      --bubble-outgoing: rgba(89, 88, 94, 0.65);
+      --text-color: #ffffff;
+      --subtext-color: #8e8e93;
+      --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #0d0d0e;
+      font-family: var(--font-family);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* Mobile Container */
+    .phone-container {
+      width: 100%;
+      max-width: 430px;
+      height: 100vh;
+      height: 100dvh;
+      background-color: var(--bg-color);
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.9);
+      transition: background 0.3s ease;
+    }
+
+    /* Top Navigation Bar */
+    .nav-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background-color: var(--header-bg);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+      padding: max(10px, env(safe-area-inset-top)) 16px 10px 16px;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+    }
+
+    .nav-back, .nav-action {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    .nav-back svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: #8e8e93;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-action svg {
+      width: 28px;
+      height: 28px;
+      fill: #8e8e93;
+    }
+
+    /* Clickable Profile Header */
+    .nav-profile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #48484a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      position: relative;
+    }
+
+    .avatar svg {
+      width: 32px;
+      height: 32px;
+      fill: #8e8e93;
+      margin-top: 4px;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .contact-name {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .contact-name svg {
+      width: 10px;
+      height: 10px;
+      stroke: #8e8e93;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* Messages Stream */
+    .chat-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      scroll-behavior: smooth;
+    }
+
+    /* Message Bubbles */
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 9px;
+    }
+
+    .msg-row {
+      display: flex;
+      width: 100%;
+    }
+
+    .msg-row.out {
+      justify-content: flex-end;
+    }
+
+    .msg-row.in {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      max-width: 74%;
+      padding: 9.5px 14px;
+      font-size: 16px;
+      line-height: 1.38;
+      border-radius: 18px;
+      word-break: break-word;
+      position: relative;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .msg-row.out .bubble {
+      background-color: var(--bubble-outgoing);
+      color: #ffffff;
+      border: 0.5px solid rgba(255, 255, 255, 0.2);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .msg-row.in .bubble {
+      background-color: var(--bubble-incoming);
+      color: #ffffff;
+      border: 0.5px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .has-tail-in {
+      border-bottom-left-radius: 4px !important;
+    }
+
+    .has-tail-out {
+      border-bottom-right-radius: 4px !important;
+    }
+
+    /* Typing Indicator Animation */
+    .typing-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 16px;
+      min-height: 38px;
+    }
+
+    .typing-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #8e8e93;
+      display: inline-block;
+      animation: iosTypingBounce 1.35s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) {
+      animation-delay: 0s;
+    }
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes iosTypingBounce {
+      0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.35;
+      }
+      30% {
+        transform: translateY(-4px);
+        opacity: 1;
+      }
+    }
+
+    /* Bottom Frosted Input Bar */
+    .input-bar {
+      position: sticky;
+      bottom: 0;
+      background-color: var(--glass-dock-bg);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 -8px 25px rgba(0, 0, 0, 0.4);
+      padding: 8px 12px max(10px, env(safe-area-inset-bottom)) 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .btn-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .btn-circle svg {
+      width: 18px;
+      height: 18px;
+      fill: #8e8e93;
+    }
+
+    .input-field-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1);
+      padding: 4px 10px 4px 14px;
+      min-height: 36px;
+    }
+
+    .input-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+    }
+
+    .input-field::placeholder {
+      color: #636366;
+    }
+
+    .send-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: #3a3a3c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      flex-shrink: 0;
+    }
+
+    .send-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: #8e8e93;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .send-btn.active {
+      background: #8e8e93;
+    }
+
+    .send-btn.active svg {
+      stroke: #000000;
+    }
+
+    /* Frosted Settings Modal Sheet */
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .settings-sheet {
+      width: 100%;
+      max-height: 85%;
+      overflow-y: auto;
+      background: rgba(28, 28, 30, 0.92);
+      backdrop-filter: blur(35px) saturate(190%);
+      -webkit-backdrop-filter: blur(35px) saturate(190%);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      border-top: 0.5px solid rgba(255, 255, 255, 0.18);
+      padding: 16px 18px max(20px, env(safe-area-inset-bottom)) 18px;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.4, 1.05);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-backdrop.open .settings-sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .sheet-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .sheet-done-btn {
+      background: none;
+      border: none;
+      color: #8e8e93;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .settings-group {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 0.5px solid rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+      gap: 12px;
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-label {
+      font-size: 14px;
+      color: #aeaeb2;
+      flex-shrink: 0;
+    }
+
+    .settings-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 14px;
+      text-align: right;
+      font-family: inherit;
+    }
+
+    .settings-input::placeholder {
+      color: #636366;
+    }
+
+    .file-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 0.5px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .danger-btn {
+      width: 100%;
+      background: rgba(255, 69, 58, 0.15);
+      color: #ff453a;
+      border: 0.5px solid rgba(255, 69, 58, 0.35);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+    }
+
+    .danger-btn:active {
+      background: rgba(255, 69, 58, 0.28);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="phone-container" id="phoneContainer">
+    <!-- Navigation Bar -->
+    <header class="nav-bar">
+      <button class="nav-back" aria-label="Back">
+        <svg viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <!-- Profile Header (Click to open settings) -->
+      <div class="nav-profile" id="openSettingsBtn">
+        <div class="avatar" id="avatarBox">
+          <svg id="defaultAvatarIcon" viewBox="0 0 24 24">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <img id="customAvatarImg" alt="Avatar" />
+        </div>
+        <div class="contact-name">
+          <span id="contactNameDisplay">A</span>
+          <svg viewBox="0 0 24 24">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <button class="nav-action" aria-label="FaceTime">
+        <svg viewBox="0 0 24 24">
+          <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Chat Messages Stream -->
+    <main class="chat-scroll" id="chatScroll">
+      <!-- Dynamic conversation starts here -->
+    </main>
+
+    <!-- Bottom Frosted Input Bar -->
+    <footer class="input-bar">
+      <button class="btn-circle" aria-label="Apps">
+        <svg viewBox="0 0 24 24">
+          <line x1="12" y1="5" x2="12" y2="19" stroke="#8e8e93" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="5" y1="12" x2="19" y2="12" stroke="#8e8e93" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="input-field-wrapper">
+        <input 
+          type="text" 
+          id="msgInput" 
+          class="input-field" 
+          placeholder="Message" 
+          autocomplete="off" 
+        />
+        <button id="sendBtn" class="send-btn" aria-label="Send">
+          <svg viewBox="0 0 24 24">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+          </svg>
+        </button>
+      </div>
+    </footer>
+
+    <!-- Frosted Settings Modal Sheet -->
+    <div class="modal-backdrop" id="settingsModal">
+      <div class="settings-sheet">
+        <div class="sheet-header">
+          <span class="sheet-title">Chat Settings</span>
+          <button class="sheet-done-btn" id="closeSettingsBtn">Done</button>
+        </div>
+
+        <!-- Appearance Group -->
+        <div class="settings-group">
+          <div class="settings-row">
+            <span class="settings-label">Contact Name</span>
+            <input type="text" id="contactNameInput" class="settings-input" placeholder="A" />
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Custom Avatar</span>
+            <label class="file-btn">
+              Choose File
+              <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" />
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Chat Wallpaper</span>
+            <label class="file-btn">
+              Choose File
+              <input type="file" id="wallpaperFileInput" accept="image/*" style="display: none;" />
+            </label>
+          </div>
+        </div>
+
+        <!-- API Settings Group (including Custom Person Set) -->
+        <div class="settings-group">
+          <div class="settings-row">
+            <span class="settings-label">API Endpoint</span>
+            <input type="text" id="apiEndpointInput" class="settings-input" placeholder="https://api.openai.com/v1" />
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">API Key</span>
+            <input type="password" id="apiKeyInput" class="settings-input" placeholder="sk-..." />
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Model</span>
+            <input type="text" id="apiModelInput" class="settings-input" placeholder="gpt-4o" />
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">System Prompt</span>
+            <input 
+              type="text" 
+              id="systemPromptInput" 
+              class="settings-input" 
+              placeholder="For example: you are a cold person who cares about me and speaks briefly" 
+            />
+          </div>
+        </div>
+
+        <!-- Restore Defaults Button -->
+        <button class="danger-btn" id="restoreDefaultsBtn">Restore Default</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Storage Keys
+    const STORAGE_KEYS = {
+      AVATAR: 'imessage_custom_avatar',
+      WALLPAPER: 'imessage_custom_wallpaper',
+      NAME: 'imessage_contact_name',
+      ENDPOINT: 'imessage_api_endpoint',
+      API_KEY: 'imessage_api_key',
+      MODEL: 'imessage_api_model',
+      SYSTEM_PROMPT: 'imessage_system_prompt'
+    };
+
+    // Conversation history memory for multi-turn dialogues
+    const conversationHistory = [];
+
+    // DOM Elements
+    const phoneContainer = document.getElementById('phoneContainer');
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const restoreDefaultsBtn = document.getElementById('restoreDefaultsBtn');
+
+    const defaultAvatarIcon = document.getElementById('defaultAvatarIcon');
+    const customAvatarImg = document.getElementById('customAvatarImg');
+    const contactNameDisplay = document.getElementById('contactNameDisplay');
+
+    const contactNameInput = document.getElementById('contactNameInput');
+    const avatarFileInput = document.getElementById('avatarFileInput');
+    const wallpaperFileInput = document.getElementById('wallpaperFileInput');
+    const apiEndpointInput = document.getElementById('apiEndpointInput');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const apiModelInput = document.getElementById('apiModelInput');
+    const systemPromptInput = document.getElementById('systemPromptInput');
+
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatScroll = document.getElementById('chatScroll');
+
+    // Helper: compress image and convert to Base64 to safely fit localStorage
+    function processImageFile(file, maxWidth = 1000) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width;
+            let h = img.height;
+            if (w > maxWidth) {
+              h = (maxWidth / w) * h;
+              w = maxWidth;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Render Avatar
+    function renderAvatar(base64Data) {
+      if (base64Data) {
+        customAvatarImg.src = base64Data;
+        customAvatarImg.style.display = 'block';
+        defaultAvatarIcon.style.display = 'none';
+      } else {
+        customAvatarImg.src = '';
+        customAvatarImg.style.display = 'none';
+        defaultAvatarIcon.style.display = 'block';
+      }
+    }
+
+    // Render Wallpaper
+    function renderWallpaper(base64Data) {
+      if (base64Data) {
+        phoneContainer.style.backgroundImage = `url("${base64Data}")`;
+      } else {
+        phoneContainer.style.backgroundImage = 'none';
+        phoneContainer.style.backgroundColor = 'var(--bg-color)';
+      }
+    }
+
+    // Helper: Normalize OpenAI Chat endpoint URL
+    function getNormalizedEndpoint() {
+      let endpoint = localStorage.getItem(STORAGE_KEYS.ENDPOINT) || 'https://api.openai.com/v1';
+      endpoint = endpoint.trim().replace(/\/+$/, '');
+      if (!endpoint.endsWith('/chat/completions')) {
+        endpoint += '/chat/completions';
+      }
+      return endpoint;
+    }
+
+    // --- PROACTIVE AI OPENING MESSAGE GENERATOR ---
+    async function triggerProactiveMessage() {
+      // 2. Call showTyping() to display typing indicator
+      showTyping();
+
+      const fallbackList = [
+        "What are you doing?",
+        "How are you today?",
+        "Hey, are you free right now?",
+        "Thinking about you.",
+        "You're finally here."
+      ];
+
+      const endpoint = getNormalizedEndpoint();
+      const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || '';
+      const model = localStorage.getItem(STORAGE_KEYS.MODEL) || 'gpt-4o';
+      const systemPrompt = localStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT) || 'You are a normal chat friend';
+
+      try {
+        if (!apiKey) {
+          throw new Error('API Key not set');
+        }
+
+        // 3. Construct temporary request with hidden system instruction
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              {
+                role: 'user',
+                content: '(System instruction: Please take the initiative to send a short daily greeting or opening line according to your personality, and output the content directly, without quotation marks or explanation, no more than 20 words)'
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        let greeting = data.choices?.[0]?.message?.content?.trim();
+
+        if (!greeting) {
+          throw new Error('Empty API response');
+        }
+
+        // Strip accidental wrapping quotes if any
+        greeting = greeting.replace(/^["'“”]+|["'“”]+$/g, '');
+
+        // 4. Hide typing animation
+        hideTyping();
+
+        // 5. Display greeting bubble
+        appendAIMessage(greeting);
+
+        // 6. Ensure continuity in conversation memory
+        conversationHistory.push({ role: 'assistant', content: greeting });
+
+      } catch (err) {
+        // 7. Fallback to a random personality line if offline or API error
+        hideTyping();
+        const fallbackMsg = fallbackList[Math.floor(Math.random() * fallbackList.length)];
+        appendAIMessage(fallbackMsg);
+        conversationHistory.push({ role: 'assistant', content: fallbackMsg });
+      }
+    }
+
+    // On Load: Prioritize and restore persisted settings from localStorage
+    window.onload = () => {
+      const savedAvatar = localStorage.getItem(STORAGE_KEYS.AVATAR);
+      if (savedAvatar) renderAvatar(savedAvatar);
+
+      const savedWallpaper = localStorage.getItem(STORAGE_KEYS.WALLPAPER);
+      if (savedWallpaper) renderWallpaper(savedWallpaper);
+
+      const savedName = localStorage.getItem(STORAGE_KEYS.NAME);
+      if (savedName) {
+        contactNameDisplay.textContent = savedName;
+        contactNameInput.value = savedName;
+      }
+
+      apiEndpointInput.value = localStorage.getItem(STORAGE_KEYS.ENDPOINT) || '';
+      apiKeyInput.value = localStorage.getItem(STORAGE_KEYS.API_KEY) || '';
+      apiModelInput.value = localStorage.getItem(STORAGE_KEYS.MODEL) || '';
+
+      const savedSystemPrompt = localStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT);
+      if (savedSystemPrompt) {
+        systemPromptInput.value = savedSystemPrompt;
+      }
+
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+
+      // 8. Call triggerProactiveMessage() after a 3-second delay
+      setTimeout(() => {
+        triggerProactiveMessage();
+      }, 3000);
+    };
+
+    // Modal Events
+    openSettingsBtn.addEventListener('click', () => {
+      settingsModal.classList.add('open');
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsModal.classList.remove('open');
+    });
+
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.classList.remove('open');
+      }
+    });
+
+    // Avatar upload -> Base64 -> localStorage
+    avatarFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          const base64 = await processImageFile(file, 200);
+          localStorage.setItem(STORAGE_KEYS.AVATAR, base64);
+          renderAvatar(base64);
+        } catch (err) {
+          console.error("Avatar upload failed:", err);
+        }
+      }
+    });
+
+    // Wallpaper upload -> Base64 -> localStorage
+    wallpaperFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          const base64 = await processImageFile(file, 1080);
+          localStorage.setItem(STORAGE_KEYS.WALLPAPER, base64);
+          renderWallpaper(base64);
+        } catch (err) {
+          console.error("Wallpaper upload failed:", err);
+        }
+      }
+    });
+
+    contactNameInput.addEventListener('input', () => {
+      const val = contactNameInput.value.trim() || 'A';
+      contactNameDisplay.textContent = val;
+      localStorage.setItem(STORAGE_KEYS.NAME, val);
+    });
+
+    apiEndpointInput.addEventListener('input', () => {
+      localStorage.setItem(STORAGE_KEYS.ENDPOINT, apiEndpointInput.value.trim());
+    });
+
+    apiKeyInput.addEventListener('input', () => {
+      localStorage.setItem(STORAGE_KEYS.API_KEY, apiKeyInput.value.trim());
+    });
+
+    apiModelInput.addEventListener('input', () => {
+      localStorage.setItem(STORAGE_KEYS.MODEL, apiModelInput.value.trim());
+    });
+
+    systemPromptInput.addEventListener('input', () => {
+      localStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, systemPromptInput.value.trim());
+    });
+
+    // Restore Default Button
+    restoreDefaultsBtn.addEventListener('click', () => {
+      if (confirm('Restore all settings, avatar, and wallpaper to default?')) {
+        localStorage.removeItem(STORAGE_KEYS.AVATAR);
+        localStorage.removeItem(STORAGE_KEYS.WALLPAPER);
+        localStorage.removeItem(STORAGE_KEYS.NAME);
+        localStorage.removeItem(STORAGE_KEYS.ENDPOINT);
+        localStorage.removeItem(STORAGE_KEYS.API_KEY);
+        localStorage.removeItem(STORAGE_KEYS.MODEL);
+        localStorage.removeItem(STORAGE_KEYS.SYSTEM_PROMPT);
+
+        conversationHistory.length = 0;
+
+        renderAvatar(null);
+        renderWallpaper(null);
+        contactNameDisplay.textContent = 'A';
+        contactNameInput.value = '';
+        avatarFileInput.value = '';
+        wallpaperFileInput.value = '';
+        apiEndpointInput.value = '';
+        apiKeyInput.value = '';
+        apiModelInput.value = '';
+        systemPromptInput.value = '';
+
+        settingsModal.classList.remove('open');
+      }
+    });
+
+    // --- TYPING INDICATOR ---
+
+    function showTyping() {
+      if (document.getElementById('typingIndicator')) return;
+
+      const group = document.createElement('div');
+      group.className = 'msg-group';
+      group.id = 'typingIndicator';
+
+      const row = document.createElement('div');
+      row.className = 'msg-row in';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble has-tail-in typing-bubble';
+
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'typing-dot';
+        bubble.appendChild(dot);
+      }
+
+      row.appendChild(bubble);
+      group.appendChild(row);
+      chatScroll.appendChild(group);
+
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
+
+    function hideTyping() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) {
+        indicator.remove();
+      }
+    }
+
+    // Helper: append incoming message bubble (Left)
+    function appendAIMessage(text, isError = false) {
+      const group = document.createElement('div');
+      group.className = 'msg-group';
+
+      const row = document.createElement('div');
+      row.className = 'msg-row in';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble has-tail-in';
+      if (isError) {
+        bubble.style.color = '#ff6961';
+        bubble.style.border = '0.5px solid rgba(255, 69, 58, 0.45)';
+        bubble.style.backgroundColor = 'rgba(45, 20, 20, 0.7)';
+      }
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      group.appendChild(row);
+      chatScroll.appendChild(group);
+
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
+
+    // --- REAL API REQUEST IMPLEMENTATION ---
+
+    async function fetchAIReply() {
+      const endpoint = getNormalizedEndpoint();
+      const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || '';
+      const model = localStorage.getItem(STORAGE_KEYS.MODEL) || 'gpt-4o';
+      const systemPrompt = localStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT) || 'You are a normal chat friend';
+
+      if (!apiKey) {
+        hideTyping();
+        appendAIMessage('Error: API Key is missing. Tap the profile at the top to configure your settings.', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              ...conversationHistory
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `HTTP ${response.status} (${response.statusText})`;
+          throw new Error(errMsg);
+        }
+
+        const data = await response.json();
+        const replyText = data.choices?.[0]?.message?.content?.trim() || 'No response content.';
+
+        conversationHistory.push({ role: 'assistant', content: replyText });
+
+        hideTyping();
+        appendAIMessage(replyText);
+
+      } catch (error) {
+        hideTyping();
+        appendAIMessage(`Request Error: ${error.message}`, true);
+      }
+    }
+
+    // Send Message: render user bubble -> showTyping -> fetchAIReply
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+
+      hideTyping();
+
+      const group = document.createElement('div');
+      group.className = 'msg-group';
+
+      const row = document.createElement('div');
+      row.className = 'msg-row out';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble has-tail-out';
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      group.appendChild(row);
+      chatScroll.appendChild(group);
+
+      conversationHistory.push({ role: 'user', content: text });
+
+      msgInput.value = '';
+      sendBtn.classList.remove('active');
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+
+      showTyping();
+      fetchAIReply();
+    }
+
+    // Input Events
+    msgInput.addEventListener('input', () => {
+      if (msgInput.value.trim().length > 0) {
+        sendBtn.classList.add('active');
+      } else {
+        sendBtn.classList.remove('active');
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
